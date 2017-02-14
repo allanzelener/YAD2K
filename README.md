@@ -4,7 +4,7 @@
 
 ## Welcome to YAD2K
 
-You only look once, but you reimplement YOLO over and over again.
+You only look once, but you reimplement neural nets over and over again.
 
 YAD2K is a 90% Keras/10% Tensorflow implementation of YOLO_v2.
 
