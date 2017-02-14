@@ -10,19 +10,36 @@ YAD2K is a 90% Keras/10% Tensorflow implementation of YOLO_v2.
 
 Original paper: [YOLO9000: Better, Faster, Stronger](https://arxiv.org/abs/1612.08242) by Joseph Redmond and Ali Farhadi.
 
-![YOLO_v2 COCO model with test_yolo defaults](images/out/dog_small.jpg)
+![YOLO_v2 COCO model with test_yolo defaults](etc/dog_small.jpg)
 
 --------------------------------------------------------------------------------
 
 ## Requirements
 
 - [Keras](https://github.com/fchollet/keras)
-- [Tensorflow](https://www.tensorflow.org/) r0.12
+- [Tensorflow](https://www.tensorflow.org/)
 - [Numpy](http://www.numpy.org/)
-- [Pillow](https://pillow.readthedocs.io/) (for rendering test results)
-- [Python](https://www.python.org/) 3.5
+- [Pillow](https://pillow.readthedocs.io/) (For rendering test results.)
+- [Python 3](https://www.python.org/)
 
-With conda use `conda env create -f environment.yml` to replicate the development environment. This environment is likely to be overcomplete.
+### Installation
+```bash
+git clone https://github.com/allanzelener/yad2k.git
+cd yad2k
+
+# [Option 1] To replicate the conda environment:
+conda env create -f environment.yml
+source activate yad2k
+# [Option 2] Install everything globaly.
+pip install numpy
+
+pip install tensorflow-gpu  # CPU-only: conda install -c conda-forge tensorflow
+pip install keras # Possibly older release: conda install keras
+```
+Until [Keras PR 5350](https://github.com/fchollet/keras/pull/5350) is merged:
+ ```
+ pip install git+https://github.com/allanzelener/keras.git@func_defaults_to_tuple
+ ```
 
 ## Quick Start
 
@@ -44,7 +61,7 @@ See `./yad2k.py --help` and `./test_yolo.py --help` for more options.
 
 The YAD2K converter currently only supports YOLO_v2 style models, this include the following configurations: `darknet19_448`, `tiny-yolo-voc`, `yolo-voc`, and `yolo`.
 
-`yad2k.py -p` will produce a plot of the generated Keras model. For example see [yolo.png](model_data/yolo.png).
+`yad2k.py -p` will produce a plot of the generated Keras model. For example see [yolo.png](etc/yolo.png).
 
 YAD2K assumes the Keras backend is Tensorflow. In particular for YOLO_v2 models with a passthrough layer, YAD2K uses `tf.space_to_depth` to implement the passthrough layer. The evaluation script also directly uses Tensorflow tensors and uses `tf.non_max_suppression` for the final output.
 
@@ -60,6 +77,7 @@ YAD2K assumes the Keras backend is Tensorflow. In particular for YOLO_v2 models 
 - Script to train YOLO_v2 reference model.
 - Support for additional Darknet layer types.
 - Tuck away the Tensorflow dependencies with Keras wrappers where possible.
+- YOLO_v2 model does not support fully convolutional mode.
 
 ## Darknets of Yore
 
