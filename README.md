@@ -55,6 +55,7 @@ YAD2K assumes the Keras backend is Tensorflow. In particular for YOLO_v2 models 
 ## Known Issues and TODOs
 
 - Error deserializing Lambda wrapping space_to_depth. Apply [this PR to Keras](https://github.com/fchollet/keras/pull/5350).
+  - `pip install git+https://github.com/allanzelener/keras.git@func_defaults_to_tuple`
 - Add YOLO_v2 loss function.
 - Script to train YOLO_v2 reference model.
 - Support for additional Darknet layer types.
