@@ -1,3 +1,8 @@
+# Ignore generated models and test images.
+*.h5
+images/*
+images/out/*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
