@@ -84,7 +84,9 @@ def _main(args):
     # TODO: Assumes dim ordering is channel last
     model_output_channels = yolo_model.layers[-1].output_shape[-1]
     assert model_output_channels == num_anchors * (num_classes + 5), \
-        'Mismatch between model and given anchor and class sizes'
+        'Mismatch between model and given anchor and class sizes. ' \
+        'Specify matching anchors and classes with --anchors_path and ' \
+        '--classes_path flags.'
     print('{} model, anchors, and classes loaded.'.format(model_path))
 
     # Check if model is fully convolutional, assuming channel last order.
