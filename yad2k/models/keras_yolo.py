@@ -148,6 +148,142 @@ def yolo_boxes_to_corners(box_xy, box_wh):
     ])
 
 
+def yolo_loss(yolo_output,
+              true_boxes,
+              anchors,
+              detectors_mask,
+              matching_true_boxes,
+              num_classes=20):
+    """YOLO localization loss function.
+
+    Parameters
+    ----------
+    yolo_output : tensor
+        Final convolutional layer features.
+
+    true_boxes : tensor
+        Ground truth boxes tensor with shape [batch, num_true_boxes, 5]
+        containing box x_center, y_center, width, height, and class.
+
+    anchors : tensor
+        Anchor boxes for model.
+
+    detectors_mask : array
+        0/1 mask for detector positions where there is a matching ground truth.
+
+    matching_true_boxes : array
+        Corresponding ground truth boxes for positive detector positions.
+        Already adjusted for conv height and width.
+
+    num_classes : int
+        Number of object classes.
+
+    Returns
+    -------
+    mean_loss : float
+        mean localization loss across minibatch
+    """
+    object_scale = 5
+    no_object_scale = 1
+    class_scale = 1
+    coordinates_scale = 1
+    pred_xy, pred_wh, pred_confidence, pred_class_prob = yolo_head(
+        yolo_output, anchors, num_classes)
+
+    # Unadjusted box predictions for loss.
+    # TODO: Remove extra computation of sigmoid(x,y).
+    pred_boxes = K.concatenate(
+        K.sigmoid(yolo_output[..., :2]), yolo_output[..., 2:4])
+
+    # TODO: Adjust predictions by image width/height for non-square images?
+    # IOUs may be off due to different aspect ratio.
+
+    # Flatten height, width, and anchor dimensions. Add ground truth dimension.
+    # pred_shape = K.shape(pred_xy)
+    # pred_flat_shape = [pred_shape[0], -1, 1, 2]
+    # pred_xy = K.reshape(pred_xy, pred_flat_shape)
+    # pred_wh = K.reshape(pred_wh, pred_flat_shape)
+
+    # Expand pred x,y,w,h to allow comparison with ground truth.
+    # batch, conv_height, conv_width, num_anchors, num_true_boxes, box_params
+    K.expand_dims(pred_xy, 4)
+    K.expand_dims(pred_wh, 4)
+
+    pred_wh_half = pred_wh / 2.
+    pred_mins = pred_xy - pred_wh_half
+    pred_maxes = pred_xy + pred_wh_half
+
+    true_boxes_shape = K.shape(true_boxes)
+
+    # batch, num predictions, num true boxes, box params
+    # true_boxes = K.expand_dims(true_boxes, 1)
+
+    # batch, conv_height, conv_width, num_anchors, num_true_boxes, box_params
+    true_boxes = K.reshape(
+        y_true, [y_true_shape[0], 1, 1, 1, y_true_shape[1], y_true_shape[2]])
+    true_xy = true_boxes[..., 0:2]
+    true_wh = true_boxes[..., 2:4]
+
+    # Find IOU of each predicted box with each ground truth box.
+    true_wh_half = true_wh / 2.
+    true_mins = true_xy - true_wh_half
+    true_maxes = true_xy + true_wh_half
+
+    intersect_mins = K.maximum(pred_mins, true_mins)
+    intersect_maxes = K.minimum(pred_maxes, true_maxes)
+    intersect_wh = K.maximum(intersect_maxes - intersect_mins, 0.)
+    intersect_areas = intersect_wh[..., 0] * intersect_wh[..., 1]
+
+    pred_areas = pred_wh[..., 0] * pred_wh[..., 1]
+    true_areas = true_wh[..., 0] * true_wh[..., 1]
+
+    union_areas = pred_areas + true_areas - intersect_areas
+    iou_scores = intersect_areas / union_areas
+
+    # Best IOUs for each location.
+    best_ious = K.max(iou_scores, axis=4)  # Best IOU scores.
+
+    # A detector has found an object if IOU > thresh for some true box.
+    object_detections = K.cast(best_ious > 0.6, K.dtype(best_ious))
+
+    # TODO: Darknet region training includes extra coordinate loss for early
+    # training steps to encourage predictions to match anchor priors.
+
+    # Is this all unneeded?
+    # top_ious = best_ious * object_detections
+    # best_box_mask = K.equal(iou_scores, best_ious)
+    # true_boxes_best = tf.boolean_mask(true_boxes, best_box_mask)
+    # true_boxes_best = K.reshape(
+    #     true_boxes_best, K.shape(y_pred)[:4] + [K.shape(true_boxes)[-1]])
+
+    # Determine confidence weights from object and no_object weights.
+    # NOTE: YOLO does not use binary cross-entropy here.
+    no_object_weights = (no_object_scale * (1 - object_detections) *
+                         (1 - detectors_mask))
+    object_weights = object_scale * detectors_mask
+    confidence_weights = object_weights + no_object_weights
+    confidence_loss = (confidence_weights *
+                       K.square(detectors_mask * best_ious - pred_confidence))
+
+    # Classification loss for matching detections.
+    # NOTE: YOLO does not use categorical cross-entropy loss here.
+    matching_classes = matching_true_boxes[..., 5]
+    matching_classes = K.one_hot(matching_classes, num_classes)
+    classification_loss = (class_scale * detectors_mask *
+                           K.square(matching_classes - pred_class_prob))
+
+    # Coordinate loss for matching detection boxes.
+    matching_boxes = matching_true_boxes[..., 0:4]
+    coordinates_loss = (coordinates_scale *
+                        K.square(matching_boxes - pred_boxes))
+
+    total_loss = 0.5 * (K.sum(confidence_loss) + K.sum(
+        classification_loss) + K.sum(coordinates_loss))
+
+    # Hack to make this a valid Keras loss function using closure.
+    return lambda y_true, y_pred: total_loss
+
+
 def yolo(inputs, anchors, num_classes):
     """Generate a complete YOLO_v2 localization model."""
     num_anchors = len(anchors)
@@ -197,3 +333,69 @@ def yolo_eval(yolo_outputs,
     scores = K.gather(scores, nms_index)
     classes = K.gather(classes, nms_index)
     return boxes, scores, classes
+
+
+def preprocess_true_boxes(true_boxes, anchors, image_size):
+    """Find detector in YOLO where ground truth box should appear.
+
+    Parameters
+    ----------
+    true_boxes : array
+        List of ground truth boxes in form of relative x, y, w, h, class.
+    anchors : array
+        List of anchors in form of w, h
+    image_size : array-like
+        List of image dimensions in form of h, w
+
+    Returns
+    -------
+    detectors_mask : array
+        0/1 mask for detectors in [conv_height, conv_width, num_anchors] that
+        should be compared with a matching ground truth box.
+    matching_true_boxes: array
+        Same shape as active_detectors with the corresponding ground truth box
+        adjusted for comparison with predicted parameters.
+    """
+    height, width = image_size
+    num_anchors = len(anchors)
+    # Downsampling factor of 5x 2-stride max_pools == 32.
+    assert height % 32 == 0, 'Image sizes in YOLO_v2 must be multiples of 32.'
+    assert width % 32 == 0, 'Image sizes in YOLO_v2 must be multiples of 32.'
+    conv_height = height // 32
+    conv_width = width // 32
+    detectors_mask = np.zeros((conv_height, conv_width, num_anchors))
+    matching_true_boxes = np.zeros((conv_height, conv_width, num_anchors, 5))
+
+    for box in true_boxes:
+        # box assumed to be relative x, y, w, h
+        i = np.floor(box[1] * conv_height).astype('int')
+        j = np.floor(box[0] * conv_width).astype('int')
+        best_iou = 0
+        best_anchor = 0
+        for k, anchor in enumerate(anchors):
+            # Find IOU between box shifted to origin and anchor box.
+            box_maxes = box[2:4] / 2.
+            box_mins = -box_maxes
+            anchor_maxes = (anchor / 2.)
+            anchor_mins = -anchor_maxes
+
+            intersect_mins = np.maximum(box_mins, anchor_mins)
+            intersect_maxes = np.minimum(box_maxes, anchor_maxes)
+            intersect_wh = np.maximum(intersect_maxes - intersect_mins, 0.)
+            intersect_area = intersect_wh[0] * intersect_wh[1]
+            box_area = box[3] * box[4]
+            anchor_area = anchor[0] * anchor[1]
+            iou = intersect_area / (box_area + anchor_area - intersect_area)
+            if iou > best_iou:
+                best_iou = iou
+                best_anchor = k
+
+        if best_iou > 0:
+            detectors_mask[i, j, k] = 1
+            adjusted_box = [
+                box[0] * conv_width - j, box[1] * conv_height - i,
+                np.log(box[2] * conv_width / anchors[best_anchor][0]),
+                np.log(box[3] * conv_height / anchors[best_anchor][1]), box[4]
+            ]
+            matching_true_boxes[i, j, k] = adjusted_box
+    return detectors_mask, matching_true_boxes
