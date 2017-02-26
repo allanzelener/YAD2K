@@ -65,5 +65,5 @@ def darknet_body():
 def darknet19(inputs):
     """Generate Darknet-19 model for Imagenet classification."""
     body = darknet_body()(inputs)
-    logits = DarknetConv2D(1000, 1, 1)(body)
+    logits = DarknetConv2D(1000, 1, 1, activation='softmax')(body)
     return Model(inputs, logits)
