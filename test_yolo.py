@@ -128,7 +128,13 @@ def _main(args):
                 tuple(reversed(model_image_size)), Image.BICUBIC)
             image_data = np.array(resized_image, dtype='float32')
         else:
-            image_data = np.array(image, dtype='float32')
+            # Due to skip connection + max pooling in YOLO_v2, inputs must have
+            # width and height as multiples of 32.
+            new_image_size = (image.width - (image.width % 32),
+                              image.height - (image.height % 32))
+            resized_image = image.resize(new_image_size, Image.BICUBIC)
+            image_data = np.array(resized_image, dtype='float32')
+            print(image_data.shape)
 
         image_data /= 255.
         image_data = np.expand_dims(image_data, 0)  # Add batch dimension.

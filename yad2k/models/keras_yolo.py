@@ -99,15 +99,14 @@ def yolo_head(feats, anchors, num_classes):
     # In YOLO the height index is the inner most iteration.
     conv_height_index = K.arange(0, stop=conv_dims[0])
     conv_width_index = K.arange(0, stop=conv_dims[1])
-    conv_height_index = K.tile(conv_height_index, [conv_dims[0]])
+    conv_height_index = K.tile(conv_height_index, [conv_dims[1]])
 
     # TODO: Repeat_elements and tf.split doesn't support dynamic splits.
     # conv_width_index = K.repeat_elements(conv_width_index, conv_dims[1], axis=0)
     conv_width_index = K.tile(
-        K.expand_dims(conv_width_index, 0), [conv_dims[1], 1])
+        K.expand_dims(conv_width_index, 0), [conv_dims[0], 1])
     conv_width_index = K.flatten(K.transpose(conv_width_index))
     conv_index = K.transpose(K.stack([conv_height_index, conv_width_index]))
-    conv_index = K.reshape(conv_index, [conv_dims[0], conv_dims[1], 2])
     conv_index = K.reshape(conv_index, [1, conv_dims[0], conv_dims[1], 1, 2])
     conv_index = K.cast(conv_index, K.dtype(feats))
 
