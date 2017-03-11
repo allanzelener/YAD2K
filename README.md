@@ -87,5 +87,6 @@ YAD2K stands on the shoulders of giants.
 - [Darknet.Keras](https://github.com/sunshineatnoon/Darknet.keras) - The original D2K for YOLO_v1.
 - [Darkflow](https://github.com/thtrieu/darkflow) - Darknet directly to Tensorflow.
 - [caffe-yolo](https://github.com/xingwangsfu/caffe-yolo) - YOLO_v1 to Caffe.
+- [yolo2-pytorch](https://github.com/longcw/yolo2-pytorch) - YOLO_v2 in PyTorch.
 
 --------------------------------------------------------------------------------
