@@ -148,12 +148,7 @@ def yolo_boxes_to_corners(box_xy, box_wh):
     ])
 
 
-def yolo_loss(yolo_output,
-              true_boxes,
-              anchors,
-              detectors_mask,
-              matching_true_boxes,
-              num_classes=20):
+def yolo_loss(args, anchors, num_classes):
     """YOLO localization loss function.
 
     Parameters
@@ -165,15 +160,15 @@ def yolo_loss(yolo_output,
         Ground truth boxes tensor with shape [batch, num_true_boxes, 5]
         containing box x_center, y_center, width, height, and class.
 
-    anchors : tensor
-        Anchor boxes for model.
-
     detectors_mask : array
         0/1 mask for detector positions where there is a matching ground truth.
 
     matching_true_boxes : array
         Corresponding ground truth boxes for positive detector positions.
         Already adjusted for conv height and width.
+
+    anchors : tensor
+        Anchor boxes for model.
 
     num_classes : int
         Number of object classes.
@@ -183,6 +178,9 @@ def yolo_loss(yolo_output,
     mean_loss : float
         mean localization loss across minibatch
     """
+    (yolo_output, true_boxes, detectors_mask, matching_true_boxes) = args
+    num_anchors = len(anchors)
+    # num_classes = K.eval(num_classes)
     object_scale = 5
     no_object_scale = 1
     class_scale = 1
@@ -191,9 +189,14 @@ def yolo_loss(yolo_output,
         yolo_output, anchors, num_classes)
 
     # Unadjusted box predictions for loss.
-    # TODO: Remove extra computation of sigmoid(x,y).
+    # TODO: Remove extra computation shared with yolo_head.
+    yolo_output_shape = K.shape(yolo_output)
+    feats = K.reshape(yolo_output, [
+        -1, yolo_output_shape[1], yolo_output_shape[2], num_anchors,
+        num_classes + 5
+    ])
     pred_boxes = K.concatenate(
-        K.sigmoid(yolo_output[..., :2]), yolo_output[..., 2:4])
+        (K.sigmoid(feats[..., 0:2]), feats[..., 2:4]), axis=-1)
 
     # TODO: Adjust predictions by image width/height for non-square images?
     # IOUs may be off due to different aspect ratio.
