@@ -111,8 +111,8 @@ def _main(args):
     boxes, scores, classes = yolo_eval(
         yolo_outputs,
         input_image_shape,
-        score_threshold=0.3,
-        iou_threshold=0.6)
+        score_threshold=args.score_threshold,
+        iou_threshold=args.iou_threshold)
 
     for image_file in os.listdir(test_path):
         try:
