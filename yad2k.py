@@ -19,7 +19,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras.regularizers import l2
-from keras.utils.visualize_util import plot
+from keras.utils.vis_utils import plot_model as plot
 
 from yad2k.models.keras_yolo import (space_to_depth_x2,
                                      space_to_depth_x2_output_shape)
