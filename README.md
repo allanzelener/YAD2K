@@ -66,7 +66,7 @@ YAD2K assumes the Keras backend is Tensorflow. In particular for YOLO_v2 models 
 
 ## Known Issues and TODOs
 
-- Add YOLO_v2 loss function. (Unfinished implementation on branch allanzelener/initial_loss_implementation).
+- Add YOLO_v2 loss function. (In-progress implementation on branch allanzelener/initial_loss_implementation).
 - Script to train YOLO_v2 reference model.
 - Support for additional Darknet layer types.
 - Tuck away the Tensorflow dependencies with Keras wrappers where possible.
