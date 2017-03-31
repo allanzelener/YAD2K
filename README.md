@@ -35,6 +35,7 @@ pip install numpy
 
 pip install tensorflow-gpu  # CPU-only: conda install -c conda-forge tensorflow
 pip install keras # Possibly older release: conda install keras
+```
 
 ## Quick Start
 
