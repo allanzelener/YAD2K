@@ -238,7 +238,8 @@ def _main(args):
             prev_layer = all_layers[-1]
 
         elif section.startswith('region'):
-            anchors = cfg_parser[section]['anchors']
+            with open('{}_anchors.txt'.format(output_root), 'w') as f:
+                print(cfg_parser[section]['anchors'], file=f)
 
         elif (section.startswith('net') or section.startswith('cost') or
               section.startswith('softmax')):
@@ -260,10 +261,6 @@ def _main(args):
                                                        remaining_weights))
     if remaining_weights > 0:
         print('Warning: {} unused weights'.format(len(remaining_weights)))
-
-    if 'region' in cfg_parser.sections():
-        with open('{}_anchors.txt'.format(output_root), 'w') as f:
-            print(anchors, file=f)
 
     if args.plot_model:
         plot(model, to_file='{}.png'.format(output_root), show_shapes=True)
