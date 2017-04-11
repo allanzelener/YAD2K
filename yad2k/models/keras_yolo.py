@@ -289,8 +289,20 @@ def yolo_loss(args, anchors, num_classes):
     coordinates_loss = (coordinates_scale * detectors_mask *
                         K.square(matching_boxes - pred_boxes))
 
-    total_loss = 0.5 * (K.sum(confidence_loss) + K.sum(classification_loss) +
-                        K.sum(coordinates_loss))
+    confidence_loss_sum = K.sum(confidence_loss)
+    classification_loss_sum = K.sum(classification_loss)
+    coordinates_loss_sum = K.sum(coordinates_loss)
+    total_loss = 0.5 * (
+        confidence_loss_sum + classification_loss_sum + coordinates_loss_sum)
+    total_loss = tf.Print(
+        total_loss, [
+            total_loss, confidence_loss_sum, classification_loss_sum,
+            coordinates_loss_sum
+        ],
+        message='Total loss and components:')
+
+    # total_loss = 0.5 * (K.sum(confidence_loss) + K.sum(classification_loss) +
+    #                     K.sum(coordinates_loss))
 
     return total_loss
 
@@ -385,7 +397,7 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
         best_anchor = 0
         for k, anchor in enumerate(anchors):
             # Find IOU between box shifted to origin and anchor box.
-            box_maxes = box[2:4] / 2.
+            box_maxes = box[2:4] * np.array([conv_width, conv_height]) / 2.
             box_mins = -box_maxes
             anchor_maxes = (anchor / 2.)
             anchor_mins = -anchor_maxes
@@ -402,6 +414,7 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
                 best_anchor = k
 
         if best_iou > 0:
+            print(i, j, best_anchor)
             detectors_mask[i, j, best_anchor] = 1
             adjusted_box = [
                 box[0] * conv_width - j, box[1] * conv_height - i,

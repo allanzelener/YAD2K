@@ -72,7 +72,7 @@ def get_boxes_for_id(voc_path, year, image_id):
                 int(xml_box.find('ymax').text))
         boxes.extend(bbox)
     return np.array(
-        boxes).T  # return transpose so last dimension is variable length
+        boxes)  # .T  # return transpose so last dimension is variable length
 
 
 def get_image_for_id(voc_path, year, image_id):
@@ -167,11 +167,11 @@ def _main(args):
 
     # store boxes as class_id, xmin, ymin, xmax, ymax
     train_boxes = train_group.create_dataset(
-        'boxes', shape=(total_train_ids, 5), dtype=vlen_int_dt)
+        'boxes', shape=(total_train_ids, ), dtype=vlen_int_dt)
     val_boxes = val_group.create_dataset(
-        'boxes', shape=(len(val_ids), 5), dtype=vlen_int_dt)
+        'boxes', shape=(len(val_ids), ), dtype=vlen_int_dt)
     test_boxes = test_group.create_dataset(
-        'boxes', shape=(len(test_ids), 5), dtype=vlen_int_dt)
+        'boxes', shape=(len(test_ids), ), dtype=vlen_int_dt)
 
     # process all ids and add to datasets
     print('Processing Pascal VOC 2007 datasets for training set.')
