@@ -108,7 +108,7 @@ def _main():
     detectors_mask = np.expand_dims(detectors_mask, axis=0)
     matching_true_boxes = np.expand_dims(matching_true_boxes, axis=0)
 
-    num_steps = 10000
+    num_steps = 1000
     # TODO: For full training, put preprocessing inside training loop.
     # for i in range(num_steps):
     #     loss = model.train_on_batch(
@@ -117,7 +117,7 @@ def _main():
     model.fit([image_data, boxes, detectors_mask, matching_true_boxes],
               np.zeros(len(image_data)),
               batch_size=1,
-              nb_epoch=num_steps)
+              epochs=num_steps)
     model.save_weights('overfit_weights.h5')
 
     # Create output variables for prediction.
