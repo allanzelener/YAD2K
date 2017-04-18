@@ -19,8 +19,10 @@ Original paper: [YOLO9000: Better, Faster, Stronger](https://arxiv.org/abs/1612.
 - [Keras](https://github.com/fchollet/keras)
 - [Tensorflow](https://www.tensorflow.org/)
 - [Numpy](http://www.numpy.org/)
+- [h5py](http://www.h5py.org/) (For Keras model serialization.)
 - [Pillow](https://pillow.readthedocs.io/) (For rendering test results.)
 - [Python 3](https://www.python.org/)
+- [pydot-ng](https://github.com/pydot/pydot-ng) (Optional for plotting model.)
 
 ### Installation
 ```bash
@@ -31,21 +33,21 @@ cd yad2k
 conda env create -f environment.yml
 source activate yad2k
 # [Option 2] Install everything globaly.
-pip install numpy
-
+pip install numpy h5py pillow
 pip install tensorflow-gpu  # CPU-only: conda install -c conda-forge tensorflow
 pip install keras # Possibly older release: conda install keras
 ```
 
 ## Quick Start
 
-- Download Darknet model weights from the [official YOLO website](http://pjreddie.com/darknet/yolo/).
+- Download Darknet model cfg and weights from the [official YOLO website](http://pjreddie.com/darknet/yolo/).
 - Convert the Darknet YOLO_v2 model to a Keras model.
 - Test the converted model on the small test set in `images/`.
 
 ```bash
 wget http://pjreddie.com/media/files/yolo.weights
-./yad2k.py cfg/yolo.cfg yolo.weights model_data/yolo.h5
+wget https://raw.githubusercontent.com/pjreddie/darknet/master/cfg/yolo.cfg
+./yad2k.py yolo.cfg yolo.weights model_data/yolo.h5
 ./test_yolo.py model_data/yolo.h5  # output in images/out/
 ```
 
@@ -65,10 +67,11 @@ YAD2K assumes the Keras backend is Tensorflow. In particular for YOLO_v2 models 
 
 `yad2k/models` contains reference implementations of Darknet-19 and YOLO_v2.
 
+`train_overfit` is a sample training script that overfits a YOLO_v2 model to a single image from the Pascal VOC dataset.
+
 ## Known Issues and TODOs
 
-- Add YOLO_v2 loss function. (In-progress implementation on branch allanzelener/initial_loss_implementation).
-- Script to train YOLO_v2 reference model.
+- Expand sample training script to train YOLO_v2 reference model on full dataset.
 - Support for additional Darknet layer types.
 - Tuck away the Tensorflow dependencies with Keras wrappers where possible.
 - YOLO_v2 model does not support fully convolutional mode. Current implementation assumes 1:1 aspect ratio images.
