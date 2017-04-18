@@ -19,7 +19,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 from keras.models import Model
 from keras.regularizers import l2
-from keras.utils.visualize_util import plot
+from keras.utils.vis_utils import plot_model as plot
 
 from yad2k.models.keras_yolo import (space_to_depth_x2,
                                      space_to_depth_x2_output_shape)
@@ -238,7 +238,8 @@ def _main(args):
             prev_layer = all_layers[-1]
 
         elif section.startswith('region'):
-            anchors = cfg_parser[section]['anchors']
+            with open('{}_anchors.txt'.format(output_root), 'w') as f:
+                print(cfg_parser[section]['anchors'], file=f)
 
         elif (section.startswith('net') or section.startswith('cost') or
               section.startswith('softmax')):
@@ -260,10 +261,6 @@ def _main(args):
                                                        remaining_weights))
     if remaining_weights > 0:
         print('Warning: {} unused weights'.format(len(remaining_weights)))
-
-    if 'region' in cfg_parser.sections():
-        with open('{}_anchors.txt'.format(output_root), 'w') as f:
-            print(anchors, file=f)
 
     if args.plot_model:
         plot(model, to_file='{}.png'.format(output_root), show_shapes=True)
