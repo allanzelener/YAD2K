@@ -366,10 +366,14 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
     ----------
     true_boxes : array
         List of ground truth boxes in form of relative x, y, w, h, class.
+        Relative coordinates are in the range [0, 1] indicating a percentage
+        of the original image dimensions.
     anchors : array
-        List of anchors in form of w, h
+        List of anchors in form of w, h.
+        Anchors are assumed to be in the range [0, conv_size] where conv_size
+        is the spatial dimension of the final convolutional features.
     image_size : array-like
-        List of image dimensions in form of h, w
+        List of image dimensions in form of h, w in pixels.
 
     Returns
     -------
@@ -383,6 +387,7 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
     height, width = image_size
     num_anchors = len(anchors)
     # Downsampling factor of 5x 2-stride max_pools == 32.
+    # TODO: Remove hardcoding of downscaling calculations.
     assert height % 32 == 0, 'Image sizes in YOLO_v2 must be multiples of 32.'
     assert width % 32 == 0, 'Image sizes in YOLO_v2 must be multiples of 32.'
     conv_height = height // 32
@@ -391,14 +396,16 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
     matching_true_boxes = np.zeros((conv_height, conv_width, num_anchors, 5))
 
     for box in true_boxes:
-        # box assumed to be relative x, y, w, h
-        i = np.floor(box[1] * conv_height).astype('int')
-        j = np.floor(box[0] * conv_width).astype('int')
+        # scale box to convolutional feature spatial dimensions
+        box[0:4] *= np.array(
+            [conv_width, conv_height, conv_width, conv_height])
+        i = np.floor(box[1]).astype('int')
+        j = np.floor(box[0]).astype('int')
         best_iou = 0
         best_anchor = 0
         for k, anchor in enumerate(anchors):
             # Find IOU between box shifted to origin and anchor box.
-            box_maxes = box[2:4] * np.array([conv_width, conv_height]) / 2.
+            box_maxes = box[2:4] / 2.
             box_mins = -box_maxes
             anchor_maxes = (anchor / 2.)
             anchor_mins = -anchor_maxes
@@ -418,9 +425,9 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
             print(i, j, best_anchor)
             detectors_mask[i, j, best_anchor] = 1
             adjusted_box = [
-                box[0] * conv_width - j, box[1] * conv_height - i,
-                np.log(box[2] * conv_width / anchors[best_anchor][0]),
-                np.log(box[3] * conv_height / anchors[best_anchor][1]), box[4]
+                box[0] - j, box[1] - i,
+                np.log(box[2] / anchors[best_anchor][0]),
+                np.log(box[3] / anchors[best_anchor][1]), box[4]
             ]
             matching_true_boxes[i, j, best_anchor] = adjusted_box
     return detectors_mask, matching_true_boxes
