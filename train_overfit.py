@@ -19,18 +19,27 @@ from yad2k.models.keras_yolo import (preprocess_true_boxes, yolo_body,
                                      yolo_eval, yolo_head, yolo_loss)
 from yad2k.utils.draw_boxes import draw_boxes
 
-COCO_ANCHORS = np.array(
-    ((0.738768, 0.874946), (2.42204, 2.65704), (4.30971, 7.04493),
-     (10.246, 4.59428), (12.6868, 11.8741)))
+YOLO_ANCHORS = np.array(
+    ((0.57273, 0.677385), (1.87446, 2.06253), (3.33843, 5.47434),
+     (7.88282, 3.52778), (9.77052, 9.16828)))
 
 
 def _main():
     voc_path = os.path.expanduser('~/datasets/VOCdevkit/pascal_voc_07_12.hdf5')
     classes_path = os.path.expanduser('model_data/pascal_classes.txt')
+    anchors_path = os.path.expanduser('model_data/yolo_anchors.txt')
 
     with open(classes_path) as f:
         class_names = f.readlines()
     class_names = [c.strip() for c in class_names]
+
+    if os.path.isfile(anchors_path):
+        with open(anchors_path) as f:
+            anchors = f.readline()
+            anchors = [float(x) for x in anchors.split(',')]
+            anchors = np.array(anchors).reshape(-1, 2)
+    else:
+        anchors = YOLO_ANCHORS
 
     voc = h5py.File(voc_path, 'r')
     image = PIL.Image.open(io.BytesIO(voc['train/images'][28]))
@@ -62,7 +71,6 @@ def _main():
     # anchor that should be active for the given boxes and 0 otherwise.
     # Matching true boxes gives the regression targets for the ground truth box
     # that caused a detector to be active or 0 otherwise.
-    anchors = COCO_ANCHORS
     detectors_mask_shape = (13, 13, 5, 1)
     matching_boxes_shape = (13, 13, 5, 5)
     detectors_mask, matching_true_boxes = preprocess_true_boxes(boxes, anchors,
