@@ -397,7 +397,8 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
 
     for box in true_boxes:
         # scale box to convolutional feature spatial dimensions
-        box[0:4] *= np.array(
+        box_class = box[4]
+        box = box[0:4] * np.array(
             [conv_width, conv_height, conv_width, conv_height])
         i = np.floor(box[1]).astype('int')
         j = np.floor(box[0]).astype('int')
@@ -427,7 +428,7 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
             adjusted_box = [
                 box[0] - j, box[1] - i,
                 np.log(box[2] / anchors[best_anchor][0]),
-                np.log(box[3] / anchors[best_anchor][1]), box[4]
+                np.log(box[3] / anchors[best_anchor][1]), box_class
             ]
             matching_true_boxes[i, j, best_anchor] = adjusted_box
     return detectors_mask, matching_true_boxes
