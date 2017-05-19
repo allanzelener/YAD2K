@@ -271,7 +271,7 @@ def yolo_loss(args, anchors, num_classes):
     # object_weights = object_scale * detectors_mask
     # rescore = object_detections * best_ious + (1 - object_detections)
     objects_loss = (object_scale * detectors_mask *
-                    K.square(1 - pred_confidence))
+                    K.square(best_ious - pred_confidence))
     confidence_loss = objects_loss + no_objects_loss
 
     # confidence_weights = object_weights + no_object_weights
