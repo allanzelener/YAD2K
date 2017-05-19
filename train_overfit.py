@@ -1,8 +1,10 @@
+#! /usr/bin/env python
 """Overfit a YOLO_v2 model to a single image from the Pascal VOC dataset.
 
 This is a sample training script used to test the implementation of the
 YOLO localization loss function.
 """
+import argparse
 import io
 import os
 
@@ -23,11 +25,32 @@ YOLO_ANCHORS = np.array(
     ((0.57273, 0.677385), (1.87446, 2.06253), (3.33843, 5.47434),
      (7.88282, 3.52778), (9.77052, 9.16828)))
 
+argparser = argparse.ArgumentParser(
+    description='Train YOLO_v2 model to overfit on a single image.')
 
-def _main():
-    voc_path = os.path.expanduser('~/datasets/VOCdevkit/pascal_voc_07_12.hdf5')
-    classes_path = os.path.expanduser('model_data/pascal_classes.txt')
-    anchors_path = os.path.expanduser('model_data/yolo_anchors.txt')
+argparser.add_argument(
+    '-d',
+    '--data_path',
+    help='path to HDF5 file containing pascal voc dataset',
+    default='~/datasets/VOCdevkit/pascal_voc_07_12.hdf5')
+
+argparser.add_argument(
+    '-a',
+    '--anchors_path',
+    help='path to anchors file, defaults to yolo_anchors.txt',
+    default='model_data/yolo_anchors.txt')
+
+argparser.add_argument(
+    '-c',
+    '--classes_path',
+    help='path to classes file, defaults to pascal_classes.txt',
+    default='model_data/pascal_classes.txt')
+
+
+def _main(args):
+    voc_path = os.path.expanduser(args.data_path)
+    classes_path = os.path.expanduser(args.classes_path)
+    anchors_path = os.path.expanduser(args.anchors_path)
 
     with open(classes_path) as f:
         class_names = f.readlines()
@@ -82,9 +105,13 @@ def _main():
     detectors_mask_input = Input(shape=detectors_mask_shape)
     matching_boxes_input = Input(shape=matching_boxes_shape)
 
+    print('Boxes:')
     print(boxes)
+    print('Box corners:')
     print(boxes_extents)
+    print('Active detectors:')
     print(np.where(detectors_mask == 1)[:-1])
+    print('Matching boxes for active detectors:')
     print(matching_true_boxes[np.where(detectors_mask == 1)[:-1]])
 
     # Create model body.
@@ -154,4 +181,5 @@ def _main():
 
 
 if __name__ == '__main__':
-    _main()
+    args = argparser.parse_args()
+    _main(args)
