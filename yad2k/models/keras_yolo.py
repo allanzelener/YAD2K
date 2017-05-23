@@ -149,7 +149,11 @@ def yolo_boxes_to_corners(box_xy, box_wh):
     ])
 
 
-def yolo_loss(args, anchors, num_classes):
+def yolo_loss(args,
+              anchors,
+              num_classes,
+              rescore_confidence=False,
+              print_loss=False):
     """YOLO localization loss function.
 
     Parameters
@@ -174,6 +178,13 @@ def yolo_loss(args, anchors, num_classes):
     num_classes : int
         Number of object classes.
 
+    rescore_confidence : bool, default=False
+        If true then set confidence target to IOU of best predicted box with
+        the closest matching ground truth box.
+
+    print_loss : bool, default=False
+        If True then use a tf.Print() to print the loss components.
+
     Returns
     -------
     mean_loss : float
@@ -181,7 +192,6 @@ def yolo_loss(args, anchors, num_classes):
     """
     (yolo_output, true_boxes, detectors_mask, matching_true_boxes) = args
     num_anchors = len(anchors)
-    # num_classes = K.eval(num_classes)
     object_scale = 5
     no_object_scale = 1
     class_scale = 1
@@ -202,12 +212,6 @@ def yolo_loss(args, anchors, num_classes):
     # TODO: Adjust predictions by image width/height for non-square images?
     # IOUs may be off due to different aspect ratio.
 
-    # Flatten height, width, and anchor dimensions. Add ground truth dimension.
-    # pred_shape = K.shape(pred_xy)
-    # pred_flat_shape = [pred_shape[0], -1, 1, 2]
-    # pred_xy = K.reshape(pred_xy, pred_flat_shape)
-    # pred_wh = K.reshape(pred_wh, pred_flat_shape)
-
     # Expand pred x,y,w,h to allow comparison with ground truth.
     # batch, conv_height, conv_width, num_anchors, num_true_boxes, box_params
     pred_xy = K.expand_dims(pred_xy, 4)
@@ -218,9 +222,6 @@ def yolo_loss(args, anchors, num_classes):
     pred_maxes = pred_xy + pred_wh_half
 
     true_boxes_shape = K.shape(true_boxes)
-
-    # batch, num predictions, num true boxes, box params
-    # true_boxes = K.expand_dims(true_boxes, 1)
 
     # batch, conv_height, conv_width, num_anchors, num_true_boxes, box_params
     true_boxes = K.reshape(true_boxes, [
@@ -255,28 +256,19 @@ def yolo_loss(args, anchors, num_classes):
     # TODO: Darknet region training includes extra coordinate loss for early
     # training steps to encourage predictions to match anchor priors.
 
-    # Is this all unneeded?
-    # top_ious = best_ious * object_detections
-    # best_box_mask = K.equal(iou_scores, best_ious)
-    # true_boxes_best = tf.boolean_mask(true_boxes, best_box_mask)
-    # true_boxes_best = K.reshape(
-    #     true_boxes_best, K.shape(y_pred)[:4] + [K.shape(true_boxes)[-1]])
-
     # Determine confidence weights from object and no_object weights.
     # NOTE: YOLO does not use binary cross-entropy here.
     no_object_weights = (no_object_scale * (1 - object_detections) *
                          (1 - detectors_mask))
     no_objects_loss = no_object_weights * K.square(-pred_confidence)
 
-    # object_weights = object_scale * detectors_mask
-    # rescore = object_detections * best_ious + (1 - object_detections)
-    objects_loss = (object_scale * detectors_mask *
-                    K.square(best_ious - pred_confidence))
+    if rescore_confidence:
+        objects_loss = (object_scale * detectors_mask *
+                        K.square(best_ious - pred_confidence))
+    else:
+        objects_loss = (object_scale * detectors_mask *
+                        K.square(1 - pred_confidence))
     confidence_loss = objects_loss + no_objects_loss
-
-    # confidence_weights = object_weights + no_object_weights
-    # confidence_loss = (confidence_weights *
-    #                   K.square(detectors_mask * best_ious - pred_confidence))
 
     # Classification loss for matching detections.
     # NOTE: YOLO does not use categorical cross-entropy loss here.
@@ -295,15 +287,13 @@ def yolo_loss(args, anchors, num_classes):
     coordinates_loss_sum = K.sum(coordinates_loss)
     total_loss = 0.5 * (
         confidence_loss_sum + classification_loss_sum + coordinates_loss_sum)
-    total_loss = tf.Print(
-        total_loss, [
-            total_loss, confidence_loss_sum, classification_loss_sum,
-            coordinates_loss_sum
-        ],
-        message='Total loss and components:')
-
-    # total_loss = 0.5 * (K.sum(confidence_loss) + K.sum(classification_loss) +
-    #                     K.sum(coordinates_loss))
+    if print_loss:
+        total_loss = tf.Print(
+            total_loss, [
+                total_loss, confidence_loss_sum, classification_loss_sum,
+                coordinates_loss_sum
+            ],
+            message='yolo_loss, conf_loss, class_loss, box_coord_loss:')
 
     return total_loss
 
