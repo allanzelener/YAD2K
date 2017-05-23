@@ -382,12 +382,16 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
     assert width % 32 == 0, 'Image sizes in YOLO_v2 must be multiples of 32.'
     conv_height = height // 32
     conv_width = width // 32
-    detectors_mask = np.zeros((conv_height, conv_width, num_anchors, 1))
-    matching_true_boxes = np.zeros((conv_height, conv_width, num_anchors, 5))
+    num_box_params = true_boxes.shape[1]
+    detectors_mask = np.zeros(
+        (conv_height, conv_width, num_anchors, 1), dtype=np.float32)
+    matching_true_boxes = np.zeros(
+        (conv_height, conv_width, num_anchors, num_box_params),
+        dtype=np.float32)
 
     for box in true_boxes:
         # scale box to convolutional feature spatial dimensions
-        box_class = box[4]
+        box_class = box[4:5]
         box = box[0:4] * np.array(
             [conv_width, conv_height, conv_width, conv_height])
         i = np.floor(box[1]).astype('int')
@@ -413,12 +417,13 @@ def preprocess_true_boxes(true_boxes, anchors, image_size):
                 best_anchor = k
 
         if best_iou > 0:
-            print(i, j, best_anchor)
             detectors_mask[i, j, best_anchor] = 1
-            adjusted_box = [
-                box[0] - j, box[1] - i,
-                np.log(box[2] / anchors[best_anchor][0]),
-                np.log(box[3] / anchors[best_anchor][1]), box_class
-            ]
+            adjusted_box = np.array(
+                [
+                    box[0] - j, box[1] - i,
+                    np.log(box[2] / anchors[best_anchor][0]),
+                    np.log(box[3] / anchors[best_anchor][1]), box_class
+                ],
+                dtype=np.float32)
             matching_true_boxes[i, j, best_anchor] = adjusted_box
     return detectors_mask, matching_true_boxes
