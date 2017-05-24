@@ -7,6 +7,8 @@
 images/*
 images/out/*
 model_data/*_anchors.txt
+
+# Tensorboard training logs
 logs/
 
 # Byte-compiled / optimized / DLL files
