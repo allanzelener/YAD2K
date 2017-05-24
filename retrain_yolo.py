@@ -1,6 +1,5 @@
 """
-This is a sample training script used to test the implementation of the
-YOLO localization loss function.
+This is a script that can be used to retrain the YOLOv2 model for your own dataset.
 """
 import argparse
 
