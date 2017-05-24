@@ -128,9 +128,16 @@ def process_data(images, boxes=None):
         boxes_wh = [boxwh / orig_size for boxwh in boxes_wh]
         boxes = [np.concatenate((boxes_xy[i], boxes_wh[i], box[:, 0:1]), axis=1) for i, box in enumerate(boxes)]
 
-        for i, boxz in enumerate(boxes): # zero pad for training
-            if boxz.shape[0]  < 6:
-                zero_padding = np.zeros( (6-boxz.shape[0], 5), dtype=np.float32)
+        # find the max number of boxes
+        max_boxes = 0
+        for boxz in boxes:
+            if boxz.shape[0] > max_boxes:
+                max_boxes = boxz.shape[0]
+
+        # add zero pad for training
+        for i, boxz in enumerate(boxes):
+            if boxz.shape[0]  < max_boxes:
+                zero_padding = np.zeros( (max_boxes-boxz.shape[0], 5), dtype=np.float32)
                 boxes[i] = np.vstack((boxz, zero_padding))
 
         return np.array(processed_images), np.array(boxes)
