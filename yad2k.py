@@ -259,7 +259,7 @@ def _main(args):
     print('Read {} of {} from Darknet weights.'.format(count, count +
                                                        remaining_weights))
     if remaining_weights > 0:
-        print('Warning: {} unused weights'.format(len(remaining_weights)))
+        print('Warning: {} unused weights'.format(remaining_weights))
 
     if args.plot_model:
         plot(model, to_file='{}.png'.format(output_root), show_shapes=True)
